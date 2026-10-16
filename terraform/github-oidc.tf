@@ -1,5 +1,24 @@
 # Keyless CI/CD: GitHub Actions exchanges its OIDC token for short-lived AWS
 # credentials by assuming this role. No AWS access keys are stored in GitHub.
+
+locals {
+  github_owner = split("/", var.github_repository)[0]
+  github_repo  = try(split("/", var.github_repository)[1], "")
+
+  # GitHub issues two subject formats: the classic "repo:owner/name:..." and the
+  # immutable "repo:owner@<owner-id>/name@<repo-id>:..." (IDs survive renames, so a
+  # recreated repo with the same name can't assume the role). Accept both.
+  github_subject_prefixes = [
+    "repo:${var.github_repository}",
+    "repo:${local.github_owner}@*/${local.github_repo}@*",
+  ]
+  github_subjects = flatten([
+    for prefix in local.github_subject_prefixes : [
+      "${prefix}:ref:refs/heads/main",
+      "${prefix}:environment:production",
+    ]
+  ])
+}
 resource "aws_iam_openid_connect_provider" "github" {
   count = var.github_repository == "" ? 0 : 1
 
@@ -28,10 +47,7 @@ data "aws_iam_policy_document" "github_assume" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values = [
-        "repo:${var.github_repository}:ref:refs/heads/main",
-        "repo:${var.github_repository}:environment:production",
-      ]
+      values   = local.github_subjects
     }
   }
 }
