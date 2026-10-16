@@ -296,7 +296,7 @@ AWS (ap-south-1)
     ├── 2 private subnets (/20) — worker nodes, pods           [kubernetes.io/role/internal-elb]
     └── EKS 1.34 (API auth mode, IRSA)
         ├── add-ons: vpc-cni, coredns, kube-proxy, pod-identity-agent, aws-ebs-csi-driver
-        └── managed node group: 2–4 × t3.medium (AL2023)
+        └── managed node group: 2–4 × m7i-flex.large (AL2023, Free Tier eligible)
 IAM: GitHub OIDC provider + deploy role (EKS access entry)
 ```
 
@@ -317,7 +317,8 @@ helm upgrade --install stockpilot ./helm/stockpilot -n stockpilot \
 kubectl get svc -n ingress-nginx ingress-nginx-controller   # EXTERNAL-IP = NLB hostname, open it
 ```
 
-> **Cost:** EKS control plane, NAT gateway, 2 × t3.medium and an NLB cost roughly US$6–8 per day. When you're finished:
+> **Cost:** EKS control plane, NAT gateway, 2 × m7i-flex.large and an NLB cost roughly US$7–9 per day (new accounts' Free Tier credits cover part of it).
+> New AWS accounts on the **Free plan** can only launch Free Tier instance types, which is why the default is `m7i-flex.large` and not `t3.medium`. When you're finished:
 > ```bash
 > helm uninstall stockpilot -n stockpilot && helm uninstall ingress-nginx -n ingress-nginx   # release the NLB first
 > terraform destroy

@@ -26,7 +26,12 @@ module "eks" {
     coredns                = {}
     kube-proxy             = {}
     eks-pod-identity-agent = {}
-    aws-ebs-csi-driver     = {} # dynamic EBS volumes for the PostgreSQL PVC
+    aws-ebs-csi-driver = { # dynamic EBS volumes for the PostgreSQL PVC
+      pod_identity_association = [{
+        role_arn        = aws_iam_role.ebs_csi.arn
+        service_account = "ebs-csi-controller-sa"
+      }]
+    }
   }
 
   eks_managed_node_groups = {
@@ -40,12 +45,6 @@ module "eks" {
       max_size     = var.node_max_size
 
       disk_size = 30
-
-      # Lets the EBS CSI driver use the node role (simplest option for a demo;
-      # use IRSA / Pod Identity for the driver in production).
-      iam_role_additional_policies = {
-        ebs_csi = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
-      }
 
       labels = {
         workload = "general"

@@ -46,9 +46,9 @@ variable "kubernetes_version" {
 }
 
 variable "node_instance_types" {
-  description = "Instance types for the managed node group"
+  description = "Instance types for the managed node group. m7i-flex.large (2 vCPU, 8 GiB) is Free Tier eligible, so it also launches on new AWS Free-plan accounts."
   type        = list(string)
-  default     = ["t3.medium"]
+  default     = ["m7i-flex.large"]
 }
 
 variable "node_capacity_type" {
