@@ -1,8 +1,22 @@
 # ingress-nginx on EKS behind an AWS Network Load Balancer.
 controller:
   replicaCount: 2
+  # One controller per node so every NLB target has a local pod.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app.kubernetes.io/name: ingress-nginx
+          app.kubernetes.io/component: controller
   service:
     type: LoadBalancer
+    # Local: the NLB only targets nodes running a controller pod and kube-proxy never
+    # hops to another node. With "Cluster", cross-node hops to port 80 are dropped by
+    # the EKS node security group (node-to-node allows 1025-65535 only), and the
+    # client IP is lost to SNAT.
+    externalTrafficPolicy: Local
     annotations:
       service.beta.kubernetes.io/aws-load-balancer-type: nlb
       service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
