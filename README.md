@@ -2,6 +2,8 @@
 
 [![CI/CD](https://github.com/dhruvdavda777/stockpilot/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/dhruvdavda777/stockpilot/actions/workflows/ci-cd.yml)
 
+**🎬 Demo video:** [Watch the walkthrough on Google Drive](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing)  ·  **📊 Slides:** [StockPilot-Capstone.pdf](docs/presentation/StockPilot-Capstone.pdf)
+
 StockPilot is a small but realistic SaaS-style inventory system for a warehouse team. It tracks products, categories, stock levels, reorder alerts and an audited log of every stock movement. It's the DevOps final capstone project: the app is the vehicle, and the delivery path is the point.
 
 ```
@@ -25,6 +27,7 @@ Developer ─▶ GitHub ─▶ GitHub Actions ─┬─ pytest (on PostgreSQL) +
 
 ## Contents
 
+- [Demo video](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing)
 - [Screenshots](#screenshots)
 1. [Requirements coverage](#1-requirements-coverage)
 2. [Repository layout](#2-repository-layout)
@@ -41,7 +44,7 @@ Developer ─▶ GitHub ─▶ GitHub Actions ─┬─ pytest (on PostgreSQL) +
 13. [Troubleshooting lab](#13-troubleshooting-lab)
 14. [Design decisions and trade-offs](#14-design-decisions-and-trade-offs)
 
-The step-by-step script for the final presentation is in **[docs/DEMO.md](docs/DEMO.md)**.
+The step-by-step runbook for the live demo is in **[docs/DEMO.md](docs/DEMO.md)**.
 
 ## Screenshots
 

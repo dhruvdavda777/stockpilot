@@ -1,4 +1,6 @@
-# Final Demo Script
+# Final Demo Runbook
+
+Recorded walkthrough: [demo video on Google Drive](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing) · slides: [StockPilot-Capstone.pdf](presentation/StockPilot-Capstone.pdf)
 
 This follows the capstone's required flow:
 
