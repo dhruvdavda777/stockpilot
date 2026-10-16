@@ -1,0 +1,54 @@
+# Full local stack: PostgreSQL + FastAPI + React/Nginx.
+#   docker compose up --build      -> http://localhost:3000
+#   docker compose down -v         -> stop and delete the database volume
+#   Ports busy? FRONTEND_PORT=3300 BACKEND_PORT=8800 DB_PORT=5544 docker compose up --build
+name: stockpilot
+
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: stockpilot
+      POSTGRES_PASSWORD: stockpilot
+      POSTGRES_DB: stockpilot
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stockpilot -d stockpilot"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      args:
+        APP_VERSION: local
+    environment:
+      DATABASE_URL: postgresql+psycopg://stockpilot:stockpilot@db:5432/stockpilot
+      ENVIRONMENT: local
+      SEED_DEMO_DATA: "true"
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_APP_VERSION: local
+        VITE_APP_ENV: local
+    environment:
+      BACKEND_URL: http://backend:8000
+    ports:
+      - "${FRONTEND_PORT:-3000}:8080"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
