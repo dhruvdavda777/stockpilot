@@ -1,0 +1,23 @@
+# SCENARIO 5 — OOMKilled
+# The memory limit is far below what the process allocates.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-generator
+  namespace: troubleshooting
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: report-generator}
+  template:
+    metadata:
+      labels: {app: report-generator}
+    spec:
+      containers:
+        - name: reports
+          image: busybox:1.37
+          # Loads ~64MB into memory (stand-in for a big report export).
+          command: ["sh", "-c", "echo building report; head -c 67108864 /dev/zero | tail > /dev/null; echo done; sleep 3600"]
+          resources:
+            requests: {memory: 16Mi, cpu: 10m}
+            limits: {memory: 24Mi, cpu: 100m}   # BUG: too small for the workload

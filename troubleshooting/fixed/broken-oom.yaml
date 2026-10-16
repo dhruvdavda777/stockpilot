@@ -1,0 +1,21 @@
+# FIX 5 — size the limit for the real workload (measure with `kubectl top pod`).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: report-generator
+  namespace: troubleshooting
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: report-generator}
+  template:
+    metadata:
+      labels: {app: report-generator}
+    spec:
+      containers:
+        - name: reports
+          image: busybox:1.37
+          command: ["sh", "-c", "echo building report; head -c 67108864 /dev/zero | tail > /dev/null; echo done; sleep 3600"]
+          resources:
+            requests: {memory: 96Mi, cpu: 10m}
+            limits: {memory: 160Mi, cpu: 100m}
