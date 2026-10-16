@@ -25,6 +25,7 @@ Developer ─▶ GitHub ─▶ GitHub Actions ─┬─ pytest (on PostgreSQL) +
 
 ## Contents
 
+- [Screenshots](#screenshots)
 1. [Requirements coverage](#1-requirements-coverage)
 2. [Repository layout](#2-repository-layout)
 3. [The application](#3-the-application)
@@ -41,6 +42,42 @@ Developer ─▶ GitHub ─▶ GitHub Actions ─┬─ pytest (on PostgreSQL) +
 14. [Design decisions and trade-offs](#14-design-decisions-and-trade-offs)
 
 The step-by-step script for the final presentation is in **[docs/DEMO.md](docs/DEMO.md)**.
+
+## Screenshots
+
+Captured from the live AWS EKS deployment (`ap-south-1`) on 16 Oct 2026, deployed by the GitHub Actions pipeline from commit `189d898`. The AWS infrastructure was destroyed with `terraform destroy` after capture to avoid cost, so the load-balancer URL in the images is no longer active.
+
+**Application**
+
+| Dashboard | Products |
+|---|---|
+| ![Dashboard](docs/screenshots/01-dashboard.png) | ![Products](docs/screenshots/02-products.png) |
+| **Create product** | **Swagger UI (`/docs`)** |
+| ![Create product](docs/screenshots/03-create-product.png) | ![Swagger](docs/screenshots/04-swagger.png) |
+
+<img src="docs/screenshots/05-mobile.png" alt="Mobile layout" width="260">
+
+**CI/CD, registry and security**
+
+| GitHub Actions: test → build → scan → push → deploy | GHCR image tagged with the commit SHA |
+|---|---|
+| ![GitHub Actions](docs/screenshots/06-github-actions.png) | ![GHCR](docs/screenshots/07-ghcr.png) |
+| **Trivy scan of the published images** | **Terraform outputs and EKS cluster** |
+| ![Trivy](docs/screenshots/13-trivy.png) | ![Terraform](docs/screenshots/12-terraform-aws.png) |
+
+**Kubernetes on EKS under load**
+
+The backend autoscaled from 2 to 8 replicas (its max) during the load test.
+
+![kubectl and helm on EKS](docs/screenshots/11-eks-kubectl.png)
+
+**Monitoring**
+
+| Grafana dashboard during the load test | Prometheus scraping both backend pods |
+|---|---|
+| ![Grafana](docs/screenshots/08-grafana.png) | ![Prometheus targets](docs/screenshots/09-prometheus-targets.png) |
+| **Alert rules (`StockPilotHpaAtMax` pending at max replicas)** | **Troubleshooting lab on EKS** |
+| ![Prometheus alerts](docs/screenshots/10-prometheus-alerts.png) | ![Troubleshooting](docs/screenshots/14-troubleshooting.png) |
 
 ---
 
