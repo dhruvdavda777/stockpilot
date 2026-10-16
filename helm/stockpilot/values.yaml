@@ -1,0 +1,96 @@
+# Default values for the StockPilot chart.
+# Environment-specific overrides live in values-dev.yaml (kind/minikube) and values-eks.yaml (AWS).
+
+nameOverride: ""
+fullnameOverride: ""
+
+environment: production
+imagePullSecrets: []   # e.g. [{name: ghcr-pull}] if the GHCR packages are private
+
+backend:
+  image:
+    repository: ghcr.io/dhruvdavda777/stockpilot-backend
+    tag: ""            # defaults to .Chart.AppVersion; CI sets this to the Git commit SHA
+    pullPolicy: IfNotPresent
+  replicaCount: 2      # ignored while autoscaling.enabled=true (HPA owns replicas)
+  port: 8000
+  seedDemoData: true
+  resources:
+    requests:
+      cpu: 100m        # HPA percentages are relative to this request
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 384Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+    targetCPUUtilizationPercentage: 60
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+
+frontend:
+  image:
+    repository: ghcr.io/dhruvdavda777/stockpilot-frontend
+    tag: ""
+    pullPolicy: IfNotPresent
+  replicaCount: 2
+  port: 8080
+  resources:
+    requests:
+      cpu: 25m
+      memory: 32Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# In-cluster PostgreSQL (StatefulSet + PVC). Good for demos; for production on AWS
+# prefer Amazon RDS: set postgresql.enabled=false and externalDatabase.url.
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: "17-alpine"
+  auth:
+    username: stockpilot
+    password: stockpilot   # override in CI: --set postgresql.auth.password=$DB_PASSWORD
+    database: stockpilot
+  persistence:
+    size: 1Gi
+    storageClass: ""       # "" = cluster default (kind: standard, EKS: see k8s/storageclass-gp3.yaml)
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: "1"
+      memory: 512Mi
+
+externalDatabase:
+  url: ""   # postgresql+psycopg://user:pass@host:5432/db — used when postgresql.enabled=false
+
+ingress:
+  enabled: false
+  className: nginx
+  host: stockpilot.local
+  annotations: {}
+  tls: []
+  #  - secretName: stockpilot-tls
+  #    hosts: [stockpilot.example.com]
+
+monitoring:
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+    labels:
+      release: monitoring   # must match the kube-prometheus-stack release name
+  prometheusRule:
+    enabled: false
+    labels:
+      release: monitoring
+  grafanaDashboard:
+    enabled: false
+    labels:
+      grafana_dashboard: "1"   # picked up by the Grafana sidecar
