@@ -1,0 +1,3 @@
+# kind kubelets use self-signed certs; EKS does not need this flag.
+args:
+  - --kubelet-insecure-tls

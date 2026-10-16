@@ -1,0 +1,11 @@
+# FIX 4 — create the missing Secret, then restart the Deployment:
+#   kubectl apply -f troubleshooting/fixed/broken-config.yaml
+#   kubectl rollout restart deployment/billing-worker -n troubleshooting
+apiVersion: v1
+kind: Secret
+metadata:
+  name: billing-db
+  namespace: troubleshooting
+type: Opaque
+stringData:
+  DATABASE_URL: postgresql+psycopg://billing:billing@billing-db:5432/billing

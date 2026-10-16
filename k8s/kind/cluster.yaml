@@ -1,0 +1,23 @@
+# Local Kubernetes for the demo: 1 control plane + 2 workers.
+# The control-plane node exposes the ingress controller on host ports 8081/8443
+# (80/443 are often taken on laptops). App URL: http://stockpilot.local:8081
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: stockpilot
+nodes:
+  - role: control-plane
+    kubeadmConfigPatches:
+      - |
+        kind: InitConfiguration
+        nodeRegistration:
+          kubeletExtraArgs:
+            node-labels: "ingress-ready=true"
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 8081
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 8443
+        protocol: TCP
+  - role: worker
+  - role: worker

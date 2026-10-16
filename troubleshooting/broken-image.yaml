@@ -1,0 +1,21 @@
+# SCENARIO 1 — ImagePullBackOff
+# The tag below was never pushed to the registry.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-api
+  namespace: troubleshooting
+  labels: {app: inventory-api}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: inventory-api}
+  template:
+    metadata:
+      labels: {app: inventory-api}
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/dhruvdavda777/stockpilot-backend:v9.9.9-does-not-exist
+          ports:
+            - containerPort: 8000

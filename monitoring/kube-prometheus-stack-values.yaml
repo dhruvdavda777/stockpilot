@@ -1,0 +1,51 @@
+# kube-prometheus-stack (Prometheus Operator + Prometheus + Alertmanager + Grafana
+# + kube-state-metrics + node-exporter), sized for a demo cluster.
+#
+#   helm upgrade --install monitoring prometheus-community/kube-prometheus-stack \
+#     -n monitoring --create-namespace -f monitoring/kube-prometheus-stack-values.yaml
+
+prometheus:
+  prometheusSpec:
+    # Pick up ServiceMonitors/PrometheusRules from every namespace and release,
+    # not only ones labelled with this Helm release.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    retention: 3d
+    scrapeInterval: 15s
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+
+grafana:
+  adminUser: admin
+  adminPassword: stockpilot-admin   # demo only — use an existing Secret in real environments
+  defaultDashboardsTimezone: browser
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      searchNamespace: ALL   # load the StockPilot dashboard ConfigMap from the app namespace
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+
+# kind/kubeadm control-plane components don't expose metrics on reachable
+# addresses; disabling these avoids permanently-red targets in the demo.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false

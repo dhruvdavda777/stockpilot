@@ -1,0 +1,7 @@
+# Isolated namespace so the broken workloads never touch the real app.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: troubleshooting
+  labels:
+    purpose: training

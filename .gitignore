@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+pytest-report.xml
+*.db
+.env
+
+# Node
+node_modules/
+dist/
+coverage/
+.vite/
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+terraform.tfvars
+crash.log
+
+# Misc
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.sarif

@@ -1,0 +1,259 @@
+# StockPilot delivery pipeline
+#
+#   TEST  ->  BUILD + TRIVY SCAN + PUSH (GHCR)  ->  DEPLOY (Helm -> EKS)
+#
+# Images are tagged with the Git commit SHA, so every running pod traces back
+# to exactly one commit. Pull requests run tests + build + scan but never push
+# or deploy.
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-cd-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  PYTHON_VERSION: "3.12"
+  NODE_VERSION: "22"
+  HELM_VERSION: v4.3.0
+
+jobs:
+  # ---------------------------------------------------------------- TEST
+  backend-test:
+    name: Backend tests (pytest + migrations)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: stockpilot
+          POSTGRES_PASSWORD: stockpilot
+          POSTGRES_DB: stockpilot
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U stockpilot"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://stockpilot:stockpilot@localhost:5432/stockpilot
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: pip install -r requirements-dev.txt
+      - name: Migrations apply cleanly (upgrade -> downgrade -> upgrade)
+        run: |
+          alembic upgrade head
+          alembic downgrade base
+          alembic upgrade head
+      - name: pytest against PostgreSQL
+        env:
+          TEST_DATABASE_URL: ${{ env.DATABASE_URL }}
+        run: pytest -q --junitxml=pytest-report.xml
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: pytest-report
+          path: backend/pytest-report.xml
+
+  frontend-test:
+    name: Frontend tests + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+  manifests-lint:
+    name: Helm + Terraform checks
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+      - name: helm lint (all value sets)
+        run: |
+          helm lint helm/stockpilot
+          helm lint helm/stockpilot -f helm/stockpilot/values-dev.yaml
+          helm lint helm/stockpilot -f helm/stockpilot/values-eks.yaml
+          helm template stockpilot helm/stockpilot -f helm/stockpilot/values-eks.yaml > /dev/null
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: "~1.16"
+      - name: terraform fmt + validate
+        working-directory: terraform
+        run: |
+          terraform fmt -check -recursive
+          terraform init -backend=false -input=false
+          terraform validate
+
+  # ------------------------------------------------- BUILD + SCAN + PUSH
+  build-scan-push:
+    name: Build, scan & push (${{ matrix.component }})
+    needs: [backend-test, frontend-test, manifests-lint]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write          # push to GHCR
+      security-events: write   # upload Trivy results to the Security tab
+    strategy:
+      fail-fast: false
+      matrix:
+        component: [backend, frontend]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Compute image name
+        id: meta
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"   # GHCR requires lowercase
+          echo "image=${REGISTRY}/${owner}/stockpilot-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      - name: Build image (local, for scanning)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.component }}
+          load: true
+          tags: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          build-args: |
+            APP_VERSION=${{ github.sha }}
+            VITE_APP_VERSION=${{ github.sha }}
+            VITE_APP_ENV=production
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+      # Quality gate: HIGH/CRITICAL vulnerabilities that have a fix fail the build.
+      - name: Trivy scan (gate)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"
+
+      - name: Trivy scan (SARIF report)
+        if: always()
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          format: sarif
+          output: trivy-${{ matrix.component }}.sarif
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: "0"
+          skip-setup-trivy: true
+
+      - name: Upload Trivy results to GitHub Security
+        if: always() && hashFiles(format('trivy-{0}.sarif', matrix.component)) != ''
+        continue-on-error: true   # code scanning needs GHAS on private repos
+        uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0
+        with:
+          sarif_file: trivy-${{ matrix.component }}.sarif
+          category: trivy-${{ matrix.component }}
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push image (SHA + latest)
+        if: github.event_name != 'pull_request'
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.component }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:${{ github.sha }}
+            ${{ steps.meta.outputs.image }}:latest
+          build-args: |
+            APP_VERSION=${{ github.sha }}
+            VITE_APP_VERSION=${{ github.sha }}
+            VITE_APP_ENV=production
+          labels: |
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+
+  # ------------------------------------------------------------- DEPLOY
+  # Runs only on main, and only once the EKS cluster exists: set the repository
+  # variable DEPLOY_ENABLED=true and the secret AWS_DEPLOY_ROLE_ARN (terraform output).
+  deploy:
+    name: Deploy to EKS (Helm)
+    needs: build-scan-push
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.DEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write   # OIDC -> AWS, no long-lived keys
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION || 'ap-south-1' }}
+      CLUSTER_NAME: ${{ vars.EKS_CLUSTER_NAME || 'stockpilot-dev-eks' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Configure kubectl
+        run: aws eks update-kubeconfig --region "$AWS_REGION" --name "$CLUSTER_NAME"
+
+      - name: helm upgrade --install
+        env:
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          owner="${GITHUB_REPOSITORY_OWNER,,}"
+          kubectl apply -f k8s/namespace.yaml
+          helm upgrade --install stockpilot ./helm/stockpilot \
+            --namespace stockpilot \
+            -f helm/stockpilot/values-eks.yaml \
+            --set "backend.image.repository=ghcr.io/${owner}/stockpilot-backend" \
+            --set "frontend.image.repository=ghcr.io/${owner}/stockpilot-frontend" \
+            --set backend.image.tag=${{ github.sha }} \
+            --set frontend.image.tag=${{ github.sha }} \
+            --set-string postgresql.auth.password="${DB_PASSWORD:-stockpilot}" \
+            --rollback-on-failure --timeout 10m
+
+      - name: Verify rollout
+        run: |
+          kubectl rollout status deployment -n stockpilot -l app.kubernetes.io/instance=stockpilot --timeout=180s
+          helm test stockpilot -n stockpilot --logs
+          kubectl get pods,svc,ingress,hpa -n stockpilot
+          helm history stockpilot -n stockpilot --max 5

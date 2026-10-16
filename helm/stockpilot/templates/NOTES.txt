@@ -1,0 +1,18 @@
+StockPilot {{ .Chart.AppVersion }} deployed as release "{{ .Release.Name }}" in namespace "{{ .Release.Namespace }}".
+
+Backend image:  {{ include "stockpilot.image" (dict "ctx" . "image" .Values.backend.image) }}
+Frontend image: {{ include "stockpilot.image" (dict "ctx" . "image" .Values.frontend.image) }}
+
+Check it:
+  kubectl get pods,svc,ingress,hpa -n {{ .Release.Namespace }}
+  helm test {{ .Release.Name }} -n {{ .Release.Namespace }}
+{{- if .Values.ingress.enabled }}
+
+Open: http://{{ default "<ingress-controller-address>" .Values.ingress.host }}/
+      http://{{ default "<ingress-controller-address>" .Values.ingress.host }}/docs
+{{- else }}
+
+No Ingress. Port-forward instead:
+  kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "stockpilot.fullname" . }}-frontend 8080:80
+  open http://localhost:8080
+{{- end }}

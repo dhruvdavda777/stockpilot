@@ -1,0 +1,22 @@
+# Weekly PRs that bump pinned versions; each PR goes through the full CI gate.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      actions: {patterns: ["*"]}
+  - package-ecosystem: pip
+    directory: /backend
+    schedule: {interval: weekly}
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule: {interval: weekly}
+    groups:
+      frontend: {patterns: ["*"]}
+  - package-ecosystem: docker
+    directories: [/backend, /frontend]
+    schedule: {interval: weekly}
+  - package-ecosystem: terraform
+    directory: /terraform
+    schedule: {interval: weekly}

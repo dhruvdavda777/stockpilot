@@ -1,0 +1,35 @@
+# SCENARIO 4 — CrashLoopBackOff from missing configuration
+# The app refuses to start without DATABASE_URL, which lives in a Secret
+# that was never created.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: billing-worker
+  namespace: troubleshooting
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: billing-worker}
+  template:
+    metadata:
+      labels: {app: billing-worker}
+    spec:
+      containers:
+        - name: worker
+          image: busybox:1.37
+          command:
+            - sh
+            - -c
+            - |
+              if [ -z "$DATABASE_URL" ]; then
+                echo "FATAL: DATABASE_URL is not set — cannot connect to PostgreSQL" >&2
+                exit 1
+              fi
+              echo "connected to $DATABASE_URL"; sleep 3600
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: billing-db       # BUG: this Secret doesn't exist...
+                  key: DATABASE_URL
+                  optional: true         # ...and optional:true hides it, so the app crashes instead

@@ -1,0 +1,25 @@
+# AWS EKS (infrastructure from terraform/). Images come from GHCR; CI sets the tags.
+environment: production
+
+backend:
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 8
+
+postgresql:
+  persistence:
+    storageClass: gp3   # created by k8s/storageclass-gp3.yaml
+    size: 5Gi
+
+ingress:
+  enabled: true
+  className: nginx
+  host: ""   # empty = match any host, so the NLB hostname works out of the box
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+  prometheusRule:
+    enabled: true
+  grafanaDashboard:
+    enabled: true

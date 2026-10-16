@@ -1,0 +1,24 @@
+# ingress-nginx on kind: bind the controller to the node's ports 80/443 on the
+# node labelled ingress-ready=true (mapped to the host by k8s/kind/cluster.yaml).
+controller:
+  hostPort:
+    enabled: true
+  service:
+    type: NodePort
+  nodeSelector:
+    ingress-ready: "true"
+  tolerations:
+    - key: node-role.kubernetes.io/control-plane
+      operator: Equal
+      effect: NoSchedule
+  watchIngressWithoutClass: false
+  publishService:
+    enabled: false
+  extraArgs:
+    publish-status-address: localhost
+  metrics:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+      additionalLabels:
+        release: monitoring

@@ -1,0 +1,36 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "stockpilot.fullname" . }}-test
+  labels:
+    {{- include "stockpilot.labels" . | nindent 4 }}
+  annotations:
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: smoke
+      image: busybox:1.37
+      command:
+        - sh
+        - -c
+        - |
+          set -e
+          wget -qO- http://{{ include "stockpilot.fullname" . }}-backend:{{ .Values.backend.port }}/ready
+          wget -qO- http://{{ include "stockpilot.fullname" . }}-backend:{{ .Values.backend.port }}/api/stats > /dev/null
+          wget -qO- http://{{ include "stockpilot.fullname" . }}-frontend/healthz
+          wget -qO- http://{{ include "stockpilot.fullname" . }}-frontend/api/stats > /dev/null
+          echo "smoke test passed"
+      securityContext:
+        allowPrivilegeEscalation: false
+        capabilities:
+          drop: [ALL]
+      resources:
+        requests: {cpu: 10m, memory: 16Mi}
+        limits: {cpu: 100m, memory: 32Mi}

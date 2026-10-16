@@ -1,0 +1,33 @@
+# Local cluster (kind / minikube / Docker Desktop).
+# Images are built locally and loaded into the cluster: see scripts/kind-up.sh
+environment: dev
+
+backend:
+  image:
+    repository: stockpilot-backend
+    tag: local
+    pullPolicy: IfNotPresent
+  autoscaling:
+    minReplicas: 2
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 50
+
+frontend:
+  image:
+    repository: stockpilot-frontend
+    tag: local
+    pullPolicy: IfNotPresent
+  replicaCount: 1
+
+ingress:
+  enabled: true
+  className: nginx
+  host: stockpilot.local
+
+monitoring:
+  serviceMonitor:
+    enabled: true
+  prometheusRule:
+    enabled: true
+  grafanaDashboard:
+    enabled: true

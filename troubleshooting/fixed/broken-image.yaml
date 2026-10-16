@@ -1,0 +1,21 @@
+# FIX 1 — point at a tag that exists. On kind use the locally loaded image;
+# on EKS use the commit SHA CI pushed (see GHCR packages).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-api
+  namespace: troubleshooting
+  labels: {app: inventory-api}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: inventory-api}
+  template:
+    metadata:
+      labels: {app: inventory-api}
+    spec:
+      containers:
+        - name: api
+          image: nginxinc/nginx-unprivileged:1.29-alpine   # a known-good public image for the lab
+          ports:
+            - containerPort: 8080

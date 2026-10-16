@@ -1,0 +1,12 @@
+# FIX 2 — selector now matches the pod labels, so endpoints appear.
+apiVersion: v1
+kind: Service
+metadata:
+  name: storefront
+  namespace: troubleshooting
+spec:
+  selector:
+    app: storefront
+  ports:
+    - port: 80
+      targetPort: 8080
