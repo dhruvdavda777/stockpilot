@@ -12,7 +12,7 @@ ENV VITE_APP_VERSION=${VITE_APP_VERSION} VITE_APP_ENV=${VITE_APP_ENV}
 RUN npm run build
 
 # ---- runtime stage: unprivileged Nginx serves dist/ (no Node in the final image) ----
-FROM nginxinc/nginx-unprivileged:1.29-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 USER root
 RUN apk upgrade --no-cache
 USER 101
