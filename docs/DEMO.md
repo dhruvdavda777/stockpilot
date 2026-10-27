@@ -1,6 +1,6 @@
 # Final Demo Runbook
 
-Recorded walkthrough: [demo video on Google Drive](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing) · slides: [StockPilot-Capstone.pdf](presentation/StockPilot-Capstone.pdf)
+Recorded walkthrough: [demo video](../demo/StockPilot-Demo.mp4) · slides: [PPTX](../demo/StockPilot-Capstone.pptx) / [PDF](../demo/StockPilot-Capstone.pdf). All are in [`demo/`](../demo).
 
 This follows the capstone's required flow:
 

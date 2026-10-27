@@ -2,7 +2,7 @@
 
 [![CI/CD](https://github.com/dhruvdavda777/stockpilot/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/dhruvdavda777/stockpilot/actions/workflows/ci-cd.yml)
 
-**🎬 Demo video:** [Watch the walkthrough on Google Drive](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing)  ·  **📊 Slides:** [StockPilot-Capstone.pdf](docs/presentation/StockPilot-Capstone.pdf)
+**🎬 Demo video:** [demo/StockPilot-Demo.mp4](demo/StockPilot-Demo.mp4) ([Google Drive copy](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing))  ·  **📊 Slides:** [PPTX](demo/StockPilot-Capstone.pptx) · [PDF](demo/StockPilot-Capstone.pdf)  ·  Everything is in [`demo/`](demo)
 
 StockPilot is a small but realistic SaaS-style inventory system for a warehouse team. It tracks products, categories, stock levels, reorder alerts and an audited log of every stock movement. It's the DevOps final capstone project: the app is the vehicle, and the delivery path is the point.
 
@@ -27,7 +27,7 @@ Developer ─▶ GitHub ─▶ GitHub Actions ─┬─ pytest (on PostgreSQL) +
 
 ## Contents
 
-- [Demo video](https://drive.google.com/file/d/1MRrkSgHbS4kNqbPPks5cNOxYc1aLxwCi/view?usp=sharing)
+- [Demo video and slides (`demo/`)](demo)
 - [Screenshots](#screenshots)
 1. [Requirements coverage](#1-requirements-coverage)
 2. [Repository layout](#2-repository-layout)
@@ -104,6 +104,21 @@ The backend autoscaled from 2 to 8 replicas (its max) during the load test.
 | HPA | `templates/hpa.yaml`: autoscaling/v2 on CPU, with tuned scale-up/down behaviour |
 | Prometheus / Grafana | `/metrics`, ServiceMonitor, PrometheusRule alerts, a Grafana dashboard provisioned from a ConfigMap |
 | Troubleshooting | `troubleshooting/`: 5 broken scenarios with fixes and a runbook |
+| Demo video + slides | `demo/`: presentation video (MP4) and slide deck (PPTX, PDF) |
+
+### Tech stack
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, Vite 8, Nginx (unprivileged) |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2, Alembic, Uvicorn |
+| Database | PostgreSQL 17 |
+| Tests | pytest, Vitest, Testing Library |
+| Containers | Docker (multi-stage, non-root), Docker Compose |
+| CI/CD | GitHub Actions, Trivy, GitHub Container Registry |
+| Infrastructure | Terraform, AWS (VPC, EKS 1.34, IAM OIDC, EBS CSI) |
+| Kubernetes | Helm 4, ingress-nginx, metrics-server, HPA, kind (local) |
+| Observability | Prometheus Operator (kube-prometheus-stack), Grafana, Alertmanager |
 
 ## 2. Repository layout
 
@@ -125,7 +140,8 @@ The backend autoscaled from 2 to 8 replicas (its max) during the load test.
 ├── monitoring/              kube-prometheus-stack values
 ├── troubleshooting/         deliberately broken manifests, fixes and a runbook
 ├── scripts/                 kind-up, deploy, load test, smoke test
-├── docs/DEMO.md             final presentation script
+├── demo/                    presentation video (MP4) + slide deck (PPTX, PDF)
+├── docs/                    live demo runbook (DEMO.md) and screenshots
 └── .github/workflows/       CI/CD
 ```
 
